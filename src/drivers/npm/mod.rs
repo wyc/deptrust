@@ -1,6 +1,9 @@
+mod npm_semver;
+
 use crate::pest;              
 #[macro_use]              
 use crate::pest_derive;
+use lazy_static::lazy_static;
 
 use std::collections::BTreeMap as Map; // BTreeMap is ordered
 
@@ -8,7 +11,12 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 use serde_json::{Value, json};
 use chrono::prelude::*;
-use pest::Parser;                        
+use pest::Parser;
+use pest::iterators::{Pair, Pairs};
+use pest::prec_climber::{Assoc, Operator, PrecClimber};                        
+use regex::Regex;
+
+use crate::version::{Version, VersionQuery as VQ, SemVer, SemVerField};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -138,49 +146,6 @@ struct RepositoryEntry {
     directory: Option<String>,
 }
 
-#[derive(Parser)]
-#[grammar = "drivers/npm/npm_semver.pest"]
-struct NpmSemVerParser;
-
-lazy_static! {
-    static ref NPM_SEM_VER_CLIMBER: NpmSemVerClimber<Rule> = {
-        use Rule::*;
-        use Assoc::*;
-
-        NpmSemVerClimber::new(vec![
-            Operator::new(tilde, Left) | Operator::new(approx, Left),
-            Operator::new(multiply, Left) | Operator::new(divide, Left),
-            Operator::new(power, Right)
-        ])
-    };
-}
-
-/*
-fn eval_version_query(expr: &str) -> VersionQuery {
-    let rv = match NpmSemVerParser::parse(Rule::range_set, i) {
-        Ok(p) => rv,
-        Err(e) => panic!("error: {}", e),
-    }
-    PREC_CLIMBER.climb(
-        expression,
-        |pair: Pair<Rule>| match pair.as_rule() {
-            Rule::num => pair.as_str().parse::<f64>().unwrap(),
-            Rule::expr => eval(pair.into_inner()),
-            _ => unreachable!(),
-        },
-        |lhs: f64, op: Pair<Rule>, rhs: f64| match op.as_rule() {
-            Rule::add      => lhs + rhs,
-            Rule::subtract => lhs - rhs,
-            Rule::multiply => lhs * rhs,
-            Rule::divide   => lhs / rhs,
-            Rule::power    => lhs.powf(rhs),
-            _ => unreachable!(),
-        },
-    )
-}
-*/
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,21 +195,5 @@ mod tests {
         let file = fs::File::open(path).unwrap();
         let reader = BufReader::new(file);
         let package_json: PackageJson = serde_json::from_reader(reader).unwrap();
-    }
-
-    #[test]
-    fn test_parse_npm_semver() {
-        let inputs = vec![
-            "1.2.3", "1.2.3-alpha", "1.2.3-alpha+001", "1.2.3+exp.46",
-            "1.2.0 - 1.3.0",
-            ">=1.2.3", "<=1.2.3", "1.2.3 || 1.2.4",
-            ">=1.2.3 <2.0",
-        ];
-        for i in inputs {
-            match NpmSemVerParser::parse(Rule::range_set, i) {
-                Ok(p) => assert_eq!(p.as_str(), i), // ensure complete parsing
-                Err(e) => panic!("error: {}", e),
-            }
-        }
     }
 }

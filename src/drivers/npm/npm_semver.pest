@@ -18,10 +18,12 @@
 range_set = { range ~ (logical_or ~ range) * }
 logical_or = { ( " " ) * ~ "||" ~ ( " " ) * }
 // range expr flipped due to eager parsing of pest
-range = { hyphen | simple ~ ( " " ~ simple ) * | "" }
-hyphen = { partial ~ " - " ~ partial }
+range = { hyphen_range | simple ~ ( logical_and ~ simple ) * | "" }
+logical_and = { " " }
+hyphen_range = { partial ~ hyphen ~ partial }
+hyphen = { " - " }
+// simple and primitive expanded for parsing
 simple = { primitive | partial | approx | compat }
-// primitive changed for LHS parsing
 primitive = { comparator ~ partial } // 
 comparator = { gte | lte | gt | lt | eq }
 gte = { ">=" }
@@ -33,10 +35,8 @@ partial = { xr ~ ( "." ~ xr ~ ( "." ~ xr ~ qualifier ? ) ? ) ? }
 xr = { "x" | "X" | "*" | nr }
 nr = { "0" | '1'..'9' ~ ( '1'..'9' ) * }
 // tilde and caret changed for LHS parsing
-approx = { tilde ~ partial }
-tilde = { "~" }
-compat = { caret ~ partial }
-caret = { "^" }
+approx = { "~" ~ partial }
+compat = { "^" ~ partial }
 qualifier = { ( "-" ~ pre ) ? ~ ( "+" ~ build ) ? }
 pre = { parts }
 build = { parts }
