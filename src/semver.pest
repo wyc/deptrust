@@ -1,0 +1,91 @@
+// https://semver.org/ pulled June 2020
+// BNF
+// <valid semver> ::= <version core>
+//                  | <version core> "-" <pre-release>
+//                  | <version core> "+" <build>
+//                  | <version core> "-" <pre-release> "+" <build>
+// <version core> ::= <major> "." <minor> "." <patch>
+// <major> ::= <numeric identifier>
+// <minor> ::= <numeric identifier>
+// <patch> ::= <numeric identifier>
+// <pre-release> ::= <dot-separated pre-release identifiers>
+// <dot-separated pre-release identifiers> ::= <pre-release identifier>
+//                                           | <pre-release identifier> "." <dot-separated pre-release identifiers>
+// <build> ::= <dot-separated build identifiers>
+// <dot-separated build identifiers> ::= <build identifier>
+//                                     | <build identifier> "." <dot-separated build identifiers>
+// <pre-release identifier> ::= <alphanumeric identifier>
+//                            | <numeric identifier>
+// <build identifier> ::= <alphanumeric identifier>
+//                      | <digits>
+// <alphanumeric identifier> ::= <non-digit>
+//                             | <non-digit> <identifier characters>
+//                             | <identifier characters> <non-digit>
+//                             | <identifier characters> <non-digit> <identifier characters>
+// <numeric identifier> ::= "0"
+//                        | <positive digit>
+//                        | <positive digit> <digits>
+// <identifier characters> ::= <identifier character>
+//                           | <identifier character> <identifier characters>
+// <identifier character> ::= <digit>
+//                          | <non-digit>
+// <non-digit> ::= <letter>
+// 		 | "-"
+// <digits> ::= <digit>
+//            | <digit> <digits>
+// <digit> ::= "0"
+//           | <positive digit>
+// <positive digit> ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+// <letter> ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J"
+//            | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T"
+//            | "U" | "V" | "W" | "X" | "Y" | "Z" | "a" | "b" | "c" | "d"
+//            | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n"
+//            | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x"
+//            | "y" | "z"
+//
+// pest grammar
+// NB. the order of some expressions have been flipped compared to the original
+// notation because the pest grammar is eager:
+// 	https://pest.rs/book/print.html#eagerness
+valid_semver = {
+        version_core ~ "-" ~ pre_release ~ "+" ~ build
+      | version_core ~ "-" ~ pre_release
+      | version_core ~ "+" ~ build
+      | version_core
+}
+version_core = { major ~ "." ~ minor ~ "." ~ patch }
+major = { digits }
+minor = { digits }
+patch = { digits }
+pre_release = { dot_separated_pre_release_identifiers }
+dot_separated_pre_release_identifiers = {
+        pre_release_identifier ~ "." ~ dot_separated_pre_release_identifiers
+      | pre_release_identifier
+}
+build = { dot_separated_build_identifiers }
+dot_separated_build_identifiers = {
+        build_identifier ~ "." ~ dot_separated_build_identifiers
+      | build_identifier
+}
+pre_release_identifier = { alphanumeric_identifier |  numeric_identifier }
+build_identifier = { alphanumeric_identifier | digits }
+alphanumeric_identifier = {
+        identifier_characters ~ non_digit ~ identifier_characters
+      | identifier_characters ~ non_digit
+      | non_digit ~ identifier_characters
+      | non_digit
+}
+numeric_identifier = { positive_digit ~ digits | positive_digit | "0" }
+identifier_characters = {
+     	identifier_character ~ identifier_characters
+      | identifier_character
+}
+identifier_character = { digit | non_digit }
+non_digit = { letter | "-" }
+digits = {
+        digit ~ digits
+      | digit
+}
+digit = { ASCII_DIGIT }
+positive_digit = { ASCII_NONZERO_DIGIT }
+letter = { ASCII_ALPHA }
